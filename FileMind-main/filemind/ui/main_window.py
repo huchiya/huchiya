@@ -979,7 +979,12 @@ class MainWindow(QMainWindow):
         self.page_title.setText(title)
         self.page_subtitle.setText(subtitle)
         is_assistant = page_name == "assistant"
-        self.page_title.setVisible(not is_assistant)
+        # Keep the title label in the row on every page (including assistant):
+        # it owns the stretch=1 slot and pins the sidebar toggle to the left.
+        # The hero area in the middle of the assistant page repeats the same
+        # copy, but the top-bar title still needs to match the other pages.
+        self.page_title.setText(title)
+        self.page_title.setVisible(True)
         self.page_subtitle.setVisible(not is_assistant and page_name != "organize")
         self.recent_area.setVisible(is_assistant)
         if is_assistant:

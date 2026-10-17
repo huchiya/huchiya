@@ -2,42 +2,63 @@
 .env
 .env.*
 !.env.example
+.env.local
+.env.*.local
 local_api_keys.json
 .filemind/
 
 # ---- 本机 AI / 开发工具工作目录 ----
 .agents/
 .artifacts/
+.cache/
 
 # ---- Python 运行产物 ----
 __pycache__/
 *.py[cod]
 *$py.class
 *.egg-info/
+.eggs/
+pip-wheel-metadata/
 build/
 dist/
 build_out/
 *.spec.bak
+*.manifest
+
+# ---- 二进制/调试符号 ----
+*.pdb
+*.ilk
+*.exp
+*.lib
+*.manifest
 
 # ---- 虚拟环境 ----
 .venv/
 venv/
+env/
 .conda/
+.python-version
 
 # ---- 测试与类型检查缓存 ----
 .pytest_cache/
 .coverage
 .coverage.*
+coverage.xml
 htmlcov/
 .mypy_cache/
 .ruff_cache/
+.hypothesis/
+.nox/
+.tox/
 
-# ---- 打包产物 ----
+# ---- 打包产物（PyInstaller / Inno Setup） ----
 *.egg
+*.wheel
 FileMind.zip
 FileMind-Setup*.exe
 FileMind_*.exe
 FileMind-*.exe
+*.msi
 installer/
 issrc/
 issrc_extract/
@@ -48,17 +69,30 @@ innosetup*.exe
 .vscode/
 *.swp
 *.swo
+*.sublime-workspace
+*.sublime-project
 
 # ---- 操作系统 ----
 Thumbs.db
 ehthumbs.db
 desktop.ini
 .DS_Store
+$RECYCLE.BIN/
 
 # ---- 日志与临时文件 ----
 *.log
+*.log.*
+logs/
 *.tmp
 *.bak
+*.orig
+
+# ---- 本地运行时数据（SQLite / 用户缓存） ----
+*.db
+*.sqlite
+*.sqlite3
+*.db-journal
 
 # ---- 本地配置（避免上传个人路径/设置） ----
 *.local.json
+*.local.toml

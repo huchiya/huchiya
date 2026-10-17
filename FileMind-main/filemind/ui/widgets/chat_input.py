@@ -42,6 +42,7 @@ class OrbitModelCombo(QComboBox):
         self.setMouseTracking(True)
         self._provider_name = ""
         self._panel: OrbitModelPanel | None = None
+        self._attached_window: QWidget | None = None
         self._arrow_angle = 0.0
         self._arrow_anim = QPropertyAnimation(self, b"arrow_angle", self)
         self._arrow_anim.setDuration(180)
@@ -81,9 +82,30 @@ class OrbitModelCombo(QComboBox):
         panel.selected.connect(self._on_panel_selected)
         panel.closed.connect(self._on_panel_closed)
         panel.setAttribute(Qt.WidgetAttribute.WA_DeleteOnClose, True)
-        panel.destroyed.connect(lambda *_args: setattr(self, "_panel", None))
+        # NB: the destroyed callback must identity-check the panel being torn
+        # down. close() only schedules deleteLater(), so when the user clicks
+        # the capsule fast, a new panel can be created before the old one's
+        # destroyed signal fires. An unconditional `self._panel = None` would
+        # then wipe the reference to the *new* panel, leaving it orphaned on
+        # the desktop with no event filter to dismiss it.
+        panel.destroyed.connect(
+            lambda *_args, p=panel: setattr(self, "_panel", None) if self._panel is p else None
+        )
         self._panel = panel
         panel.adjustSize()
+        panel.move(self._compute_panel_origin(panel))
+        panel.show()
+        QApplication.instance().installEventFilter(self)
+        # Track the top-level window so the panel follows the app on move/resize
+        # and dismisses when the window loses focus — otherwise the frameless
+        # tool window is left stranded on the desktop after the user drags the
+        # main window.
+        self._attached_window = self.window()
+        self._animate_arrow(True)
+        self.update()
+
+    def _compute_panel_origin(self, panel: QWidget) -> QPoint:
+        """Where the panel should sit, relative to the capsule, clamped to screen."""
         top_left = self.mapToGlobal(self.rect().topLeft())
         bottom_left = self.mapToGlobal(self.rect().bottomLeft())
         # Default: open upward, aligned with the capsule.
@@ -98,11 +120,14 @@ class OrbitModelCombo(QComboBox):
             if origin.x() + panel.width() > available.right():
                 origin.setX(available.right() - panel.width() - 8)
             origin.setX(max(origin.x(), available.left() + 8))
-        panel.move(origin)
-        panel.show()
-        QApplication.instance().installEventFilter(self)
-        self._animate_arrow(True)
-        self.update()
+        return origin
+
+    def _reposition_panel(self) -> None:
+        """Move the panel to track the capsule after the window moved/resized."""
+        panel = self._panel
+        if panel is None:
+            return
+        panel.move(self._compute_panel_origin(panel))
 
     @staticmethod
     def _global_rect(widget: QWidget) -> QRect:
@@ -110,8 +135,16 @@ class OrbitModelCombo(QComboBox):
 
     def eventFilter(self, obj, event) -> bool:
         """Dismiss the panel on outside clicks; a click on the capsule closes it
-        without immediately reopening; a click on an item is left to the button."""
-        if event.type() == QEvent.Type.MouseButtonPress and self._panel is not None:
+        without immediately reopening; a click on an item is left to the button.
+
+        Also handles:
+          * Escape key press  -> close the panel
+          * top-level window move/resize -> reposition the panel so it tracks
+            the capsule instead of being stranded on the desktop
+          * top-level window deactivate  -> close the panel (user switched away)
+        """
+        etype = event.type()
+        if etype == QEvent.Type.MouseButtonPress and self._panel is not None:
             position = event.globalPosition().toPoint()
             if self._global_rect(self._panel).contains(position):
                 return False
@@ -120,10 +153,28 @@ class OrbitModelCombo(QComboBox):
                 return True
             self._dismiss_panel()
             return False
+        if self._panel is not None and etype == QEvent.Type.KeyPress:
+            if event.key() == Qt.Key.Key_Escape:
+                self._dismiss_panel()
+                return True
+        # Window-level tracking events arrive with obj == the top-level window
+        # we captured in showPopup(); only act while the panel is alive.
+        if self._panel is not None and obj is self._attached_window:
+            if etype in (QEvent.Type.Move, QEvent.Type.Resize):
+                self._reposition_panel()
+                return False
+            if etype == QEvent.Type.WindowDeactivate:
+                # Ignore the deactivation caused by the panel (a Tool window)
+                # itself grabbing focus; only close when the user truly leaves
+                # the app.
+                if QApplication.activeWindow() is not self._panel:
+                    self._dismiss_panel()
+                    return True
         return super().eventFilter(obj, event)
 
     def _dismiss_panel(self) -> None:
         QApplication.instance().removeEventFilter(self)
+        self._attached_window = None
         panel = self._panel
         self._panel = None
         if panel is not None:
@@ -131,6 +182,7 @@ class OrbitModelCombo(QComboBox):
 
     def _on_panel_closed(self) -> None:
         QApplication.instance().removeEventFilter(self)
+        self._attached_window = None
         self._panel = None
         self._animate_arrow(False)
         self.update()
