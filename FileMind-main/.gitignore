@@ -1,0 +1,64 @@
+# ---- 密钥与本机私有配置 ----
+.env
+.env.*
+!.env.example
+local_api_keys.json
+.filemind/
+
+# ---- 本机 AI / 开发工具工作目录 ----
+.agents/
+.artifacts/
+
+# ---- Python 运行产物 ----
+__pycache__/
+*.py[cod]
+*$py.class
+*.egg-info/
+build/
+dist/
+build_out/
+*.spec.bak
+
+# ---- 虚拟环境 ----
+.venv/
+venv/
+.conda/
+
+# ---- 测试与类型检查缓存 ----
+.pytest_cache/
+.coverage
+.coverage.*
+htmlcov/
+.mypy_cache/
+.ruff_cache/
+
+# ---- 打包产物 ----
+*.egg
+FileMind.zip
+FileMind-Setup*.exe
+FileMind_*.exe
+FileMind-*.exe
+installer/
+issrc/
+issrc_extract/
+innosetup*.exe
+
+# ---- 开发工具与 IDE ----
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# ---- 操作系统 ----
+Thumbs.db
+ehthumbs.db
+desktop.ini
+.DS_Store
+
+# ---- 日志与临时文件 ----
+*.log
+*.tmp
+*.bak
+
+# ---- 本地配置（避免上传个人路径/设置） ----
+*.local.json
